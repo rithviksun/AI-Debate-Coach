@@ -1,11 +1,12 @@
 [project]
-name = "blank-app-template"
+name = "ai-debate-coach"
 version = "0.1.0"
-description = "A simple Streamlit app template."
+description = "An interactive debate coaching app."
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.10"
 dependencies = [
     "streamlit>=1.59.2",
+    "openai>=1.0.0",
 ]
 
 [tool.uv]
