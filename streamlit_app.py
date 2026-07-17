@@ -1,8 +1,10 @@
 import os
+
 import streamlit as st
 
 from debate_coach import generate_debate_content, rate_opening_statement
-from sparring_room import run_sparring_room
+
+
 
 
 def get_secret_api_key() -> str | None:
@@ -32,83 +34,72 @@ with st.sidebar:
     if secret_api_key:
         st.caption("Using the stored OpenAI secret.")
 
-# Main navigation menu options
-mode = st.radio("Choose an action", ["Generate a draft", "Rate my own opening", "Live Sparring Ring"], horizontal=True)
+mode = st.radio("Choose an action", ["Generate a draft", "Rate my own opening"], horizontal=True)
+user_opening = ""
+if mode == "Rate my own opening":
+    user_opening = st.text_area(
+        "Paste your opening statement",
+        placeholder="Write your opening statement here...",
+        height=180,
+    )
 
-# Select the active api key to use across features
-active_api_key = api_key_input or secret_api_key or None
-
-# --- CONDITION 1: LIVE SPARRING RING ---
-if mode == "Live Sparring Ring":
-    run_sparring_room(topic=topic, stance=stance, api_key=active_api_key)
-
-# --- CONDITION 2: DRAFTING AND RATING FEATURES ---
-else:
-    user_opening = ""
-    if mode == "Rate my own opening":
-        user_opening = st.text_area(
-            "Paste your opening statement",
-            placeholder="Write your opening statement here...",
-            height=180,
-        )
-
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("Run", use_container_width=True):
-            if mode == "Generate a draft":
-                result = generate_debate_content(topic, stance, style, api_key=active_api_key)
-            else:
-                result = rate_opening_statement(user_opening, topic, stance)
-                result["opening_statement"] = user_opening or "No opening statement provided."
-                result["key_points"] = [
-                    "State your claim more clearly.",
-                    "Add one supporting example.",
-                    "Make your closing line more memorable.",
-                ]
-                result["possible_rebuttals"] = [
-                    "Consider the strongest counterargument to your thesis.",
-                    "Prepare a response to objections about fairness or practicality.",
-                ]
-                result["concluding_statement"] = "Refine your conclusion so it reinforces your main claim."
-                result["source"] = "user"
-            st.session_state["coaching_result"] = result
-
-    with col2:
-        if st.button("Clear results", use_container_width=True):
-            st.session_state.pop("coaching_result", None)
-
-    if "coaching_result" in st.session_state:
-        result = st.session_state["coaching_result"]
-        st.success(f"Generated with: {result.get('source', 'fallback')}")
-
-        st.subheader("Opening statement")
-        st.write(result.get("opening_statement", "No opening statement available."))
-
-        st.subheader("Key points")
-        key_points = result.get("key_points") or result.get("rebuttal_points") or []
-        for point in key_points:
-            st.markdown(f"- {point}")
-
-        st.subheader("Possible rebuttals")
-        possible_rebuttals = result.get("possible_rebuttals") or result.get("rebuttal_points") or []
-        for point in possible_rebuttals:
-            st.markdown(f"- {point}")
-
-        st.subheader("Concluding statement")
-        st.write(result.get("concluding_statement", "No conclusion available."))
-
-        st.subheader("Feedback")
-        feedback = result.get("feedback", {})
-        if isinstance(feedback, dict):
-            feedback_payload = feedback
+col1, col2 = st.columns(2)
+with col1:
+    if st.button("Run", use_container_width=True):
+        if mode == "Generate a draft":
+            result = generate_debate_content(topic, stance, style, api_key=api_key_input or secret_api_key or None)
         else:
-            feedback_payload = {
-                "feedback": str(feedback or "No feedback available."),
-                "score": result.get("score", 0),
-                "word_count": 0,
-            }
+            result = rate_opening_statement(user_opening, topic, stance)
+            result["opening_statement"] = user_opening or "No opening statement provided."
+            result["key_points"] = [
+                "State your claim more clearly.",
+                "Add one supporting example.",
+                "Make your closing line more memorable.",
+            ]
+            result["possible_rebuttals"] = [
+                "Consider the strongest counterargument to your thesis.",
+                "Prepare a response to objections about fairness or practicality.",
+            ]
+            result["concluding_statement"] = "Refine your conclusion so it reinforces your main claim."
+            result["source"] = "user"
+        st.session_state["coaching_result"] = result
 
-        score = result.get("score", feedback_payload.get("score", 0))
-        st.metric("Score", f"{score}/100")
-        st.write(feedback_payload.get("feedback", "No feedback available."))
-        st.caption(f"Word count: {feedback_payload.get('word_count', 0)}")
+with col2:
+    if st.button("Clear results", use_container_width=True):
+        st.session_state.pop("coaching_result", None)
+
+if "coaching_result" in st.session_state:
+    result = st.session_state["coaching_result"]
+    st.success(f"Generated with: {result.get('source', 'fallback')}")
+
+    st.subheader("Opening statement")
+    st.write(result.get("opening_statement", "No opening statement available."))
+
+    st.subheader("Key points")
+    key_points = result.get("key_points") or result.get("rebuttal_points") or []
+    for point in key_points:
+        st.markdown(f"- {point}")
+
+    st.subheader("Possible rebuttals")
+    possible_rebuttals = result.get("possible_rebuttals") or result.get("rebuttal_points") or []
+    for point in possible_rebuttals:
+        st.markdown(f"- {point}")
+
+    st.subheader("Concluding statement")
+    st.write(result.get("concluding_statement", "No conclusion available."))
+
+    st.subheader("Feedback")
+    feedback = result.get("feedback", {})
+    if isinstance(feedback, dict):
+        feedback_payload = feedback
+    else:
+        feedback_payload = {
+            "feedback": str(feedback or "No feedback available."),
+            "score": result.get("score", 0),
+            "word_count": 0,
+        }
+
+    score = result.get("score", feedback_payload.get("score", 0))
+    st.metric("Score", f"{score}/100")
+    st.write(feedback_payload.get("feedback", "No feedback available."))
+    st.caption(f"Word count: {feedback_payload.get('word_count', 0)}")
